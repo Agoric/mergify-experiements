@@ -37,11 +37,6 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v3
-      - name: Recreate integration-test-result if needed
-        id: get-pending-integration-result
-        uses: ./.github/actions/get-latest-check
-        with:
-          create-if-needed: true
       - name: Get the behavior from the PR description
         id: get-behavior
         uses: actions/github-script@v6
@@ -83,11 +78,6 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v3
-      - name: Recreate integration-test-result if needed
-        id: get-pending-integration-result
-        uses: ./.github/actions/get-latest-check
-        with:
-          create-if-needed: true
       - name: Get the behavior from the PR description
         id: get-behavior
         uses: actions/github-script@v6
@@ -115,29 +105,6 @@ jobs:
           sleep ${{ fromJSON(steps.get-behavior.outputs.result).sleep || 45 }}
           exit ${{ fromJSON(steps.get-behavior.outputs.result).exitCode || 0 }}
 
-  set-integration-result-in-progress:
-    needs: pre_check
-    if: needs.pre_check.outputs.should_run == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - id: get-pending-integration-result
-        uses: ./.github/actions/get-latest-check
-        with:
-          create-if-needed: true
-      - name: Update integration-test-result check to in-progress
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const runId = "${{ steps.get-pending-integration-result.outputs.run_id }}";
-            const res = await github.rest.checks.update({
-              ...context.repo,
-              check_run_id: runId,
-              status: "in_progress",
-            })
-            core.debug(`Check update response: ${JSON.stringify(res, null, 2)}`)
-            console.log(`Updated check ${runId} to in-progress`)
-
   finalize-integration-result:
     needs:
       - pre_check
@@ -155,25 +122,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - id: get-pending-integration-result
-        uses: ./.github/actions/get-latest-check
-        with:
-          create-if-needed: true
-      - name: Publish integration-test-result
+      - name: Final integration test result
         if: always()
         uses: actions/github-script@v6
         with:
           script: |
-            const runId = "${{ steps.get-pending-integration-result.outputs.run_id }}";
             const previousSuccess = ${{ needs.pre_check.outputs.previous_success }};
             const matrixTestSuccess = "${{ needs.matrix-test.result }}" === "success";
             const standaloneTestSuccess = "${{ needs.standalone-test.result }}" === "success";
             const conclusion = previousSuccess || (matrixTestSuccess && standaloneTestSuccess) ?
               'success' : 'failure';
-            const res = await github.rest.checks.update({
-              ...context.repo,
-              check_run_id: runId,
-              conclusion,
-            })
-            core.debug(`Check update response: ${JSON.stringify(res, null, 2)}`)
-            console.log(`Updated check ${runId} to ${conclusion}`)
+            console.log(`Finishing with ${conclusion}`)
+            if (conclusion === 'failure') {
+              core.setFailed('Integration tests failed')
+            }
