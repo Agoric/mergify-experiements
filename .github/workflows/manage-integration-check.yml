@@ -30,6 +30,7 @@ jobs:
 
             if (run) {
               // Check already exists.
+              core.debug(`integration-test-result ${external_id} check already exists: ${run.id}`)
               return run.id;
             }
 
