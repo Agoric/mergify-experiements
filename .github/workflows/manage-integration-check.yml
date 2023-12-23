@@ -18,6 +18,21 @@ jobs:
           script: |
             const external_id = context.payload.workflow_run.html_url;
             const head_sha = context.payload.workflow_run.head_sha;
+            const runs = await github.paginate(github.rest.checks.listForRef, {
+              ...context.repo,
+              ref: head_sha,
+              check_name: "integration-test-result",
+              external_id,
+            })
+            core.debug(`integration-test-result check runs: ${JSON.stringify(runs, null, 2)}`);
+            const descRuns = runs.sort((a, b) => Date.parse(b.started_at) - Date.parse(a.started_at));
+            const run = descRuns[0];
+
+            if (run) {
+              // Check already exists.
+              return run.id;
+            }
+
             const check = await github.rest.checks.create({
               ...context.repo,
               head_sha,
