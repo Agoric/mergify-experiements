@@ -1,42 +1,42 @@
 # Linear queue for the main branch.
 shared:
-    commit_message_template: &commit-message-template |-
-      {{ title }} (#{{ number }})
+  commit_message_template: &commit-message-template |-
+    {{ title }} (#{{ number }})
 
-      {{ body | trim }}
-    queue_conditions: &queue-conditions
-      - base=main
-      - or:
-          - check-pending=integration-test-result
-          - check-success=integration-test-result
-          - label=bypass:integration
-    merge_conditions: &merge-conditions
-      - base=main
+    {{ body | trim }}
+  queue_conditions: &queue-conditions
+    - base=main
+    - or:
+        - check-pending=integration-test-result
+        - check-success=integration-test-result
+        - label=bypass:integration
+  merge_conditions: &merge-conditions
+    - base=main
       # Rebase PRs with fixup commits are allowed to enter the merge queue but 
       # should not be allowed to merge if there are leftover fixup commits after rebase
-      - or:
-          - label=bypass:linear-history
-          - check-success=no-fixup-commits
-          - check-skipped=no-fixup-commits
+    - or:
+        - label=bypass:linear-history
+        - check-success=no-fixup-commits
+        - check-skipped=no-fixup-commits
       # Require integration tests before merging only
-      - or:
-          - label=bypass:integration
-          - check-success=integration-test-result
-    pr_queue_merge_conditions: &pr-queue-merge-conditions
-      - base=main
-      - label=automerge:no-update
-      - or:
-          - '#commits-behind=0'
-          - label=bypass:linear-history
-    pr_queue_rebase_conditions: &pr-queue-rebase-conditions
-      - base=main
-      - label=automerge:rebase
-      - or:
-          - '#commits-behind>0'
-          - linear-history
-    pr_queue_squash_conditions: &pr-queue-squash-conditions
-      - base=main
-      - label=automerge:squash
+    - or:
+        - label=bypass:integration
+        - check-success=integration-test-result
+  pr_queue_merge_conditions: &pr-queue-merge-conditions
+    - base=main
+    - label=automerge:no-update
+    - or:
+        - '#commits-behind=0'
+        - label=bypass:linear-history
+  pr_queue_rebase_conditions: &pr-queue-rebase-conditions
+    - base=main
+    - label=automerge:rebase
+    - or:
+        - '#commits-behind>0'
+        - linear-history
+  pr_queue_squash_conditions: &pr-queue-squash-conditions
+    - base=main
+    - label=automerge:squash
 
 priority_rules:
   - name: high_priority
@@ -44,6 +44,14 @@ priority_rules:
       - label=priority:high
     priority: high
 
+  - name: priority for queue `rebase`
+    conditions:
+      - queue-name=rebase
+    priority: 2500
+  - name: priority for queue `merge`
+    conditions:
+      - queue-name=merge
+    priority: 2250
 queue_rules:
   - name: rebase
     commit_message_template: *commit-message-template
@@ -86,8 +94,8 @@ pull_request_rules:
       - label=automerge:rebase
       - '#commits-behind=0'
       - or:
-        - -linear-history
-        - check-failure=no-fixup-commits
+          - -linear-history
+          - check-failure=no-fixup-commits
       - -draft
     actions:
       rebase:
