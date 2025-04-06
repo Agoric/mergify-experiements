@@ -16,7 +16,7 @@ jobs:
         if: ${{ github.event.action == 'requested' || github.event.action == 'in_progress' }}
         with:
           script: |
-            const external_id = context.payload.workflow_run.html_url;
+            const external_id = context.payload.workflow_run.html_url + "-" + context.payload.workflow_run.run_attempt;
             const head_sha = context.payload.workflow_run.head_sha;
             const runs = await github.paginate(github.rest.checks.listForRef, {
               ...context.repo,
@@ -55,7 +55,7 @@ jobs:
           result-encoding: string
           script: |
             // Update the check run
-            const external_id = context.payload.workflow_run.html_url;
+            const external_id = context.payload.workflow_run.html_url + "-" + context.payload.workflow_run.run_attempt;
             const head_sha = context.payload.workflow_run.head_sha;
             const runs = await github.paginate(github.rest.checks.listForRef, {
               ...context.repo,
