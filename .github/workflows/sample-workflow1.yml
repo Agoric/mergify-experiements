@@ -1,0 +1,44 @@
+name: Sample Workflow1
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - opened
+      - synchronize
+
+jobs:
+  stable-job:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run stable test
+        run: |
+          echo "This job always succeeds"
+          echo "Running stable tests..."
+          sleep 5
+          echo "Stable tests passed!"
+
+  flaky-job:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run some setup
+        run: |
+          echo "Setting up test environment..."
+          sleep 2
+
+      - name: TEMP - Simulate flaky test (REMOVE AFTER TESTING)
+        if: github.run_attempt == 1
+        run: |
+          echo "Simulating flaky test - failing on attempt 1"
+          exit 1
+
+      - name: Run actual tests
+        run: |
+          echo "Running tests..."
+          sleep 3
+          echo "Tests passed!"
