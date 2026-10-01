@@ -1,9 +1,9 @@
 # Linear queue for the main branch.
 shared:
     commit_message_template: &commit-message-template |-
-      {{ title }} (#{{ number }})
+        {{ title }} (#{{ number }})
 
-      {{ body | trim }}
+        {{ body | trim }}
     queue_conditions: &queue-conditions
       - base=main
       - or:
@@ -68,27 +68,26 @@ pull_request_rules:
   - name: merge to main
     conditions: *pr-queue-merge-conditions
     actions:
-      queue:
-        name: merge
+        queue:
+            name: merge
   - name: rebase updates then merge to main
     conditions: *pr-queue-rebase-conditions
     actions:
-      queue:
-        name: rebase
+        queue:
+            name: rebase
   - name: squash to main
     conditions: *pr-queue-squash-conditions
     actions:
-      queue:
-        name: squash
+        queue:
+            name: squash
   - name: rebase and autosquash
     conditions:
       - base=main
       - label=automerge:rebase
       - '#commits-behind=0'
       - or:
-        - -linear-history
-        - check-failure=no-fixup-commits
+          - -linear-history
+          - check-failure=no-fixup-commits
       - -draft
     actions:
-      rebase:
-        autosquash: true
+        rebase: {}
