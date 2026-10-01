@@ -1,0 +1,2 @@
+Autosquash App-token test.
+Folded by the AGORIC_CI_BOT App.
