@@ -1,47 +1,71 @@
 # Linear queue for the main branch.
 shared:
-    commit_message_format: &commit-message-format
-      title: pr-title
-      body: pr-body
-    queue_conditions: &queue-conditions
-      - base=main
-      - or:
-          - check-pending=integration-test-result
-          - check-success=integration-test-result
-          - label=bypass:integration
-    merge_conditions: &merge-conditions
-      - base=main
-      # Rebase PRs with fixup commits are allowed to enter the merge queue but 
-      # should not be allowed to merge if there are leftover fixup commits after rebase
-      - or:
-          - label=bypass:linear-history
-          - check-success=no-fixup-commits
-          - check-skipped=no-fixup-commits
-      # Require integration tests before merging only
-      - or:
-          - label=bypass:integration
-          - check-success=integration-test-result
-    pr_queue_merge_conditions: &pr-queue-merge-conditions
-      - base=main
-      - label=automerge:no-update
-      - or:
-          - '#commits-behind=0'
-          - label=bypass:linear-history
-    pr_queue_rebase_conditions: &pr-queue-rebase-conditions
-      - base=main
-      - label=automerge:rebase
-      - or:
-          - '#commits-behind>0'
-          - linear-history
-    pr_queue_squash_conditions: &pr-queue-squash-conditions
-      - base=main
-      - label=automerge:squash
+  commit_message_format: &commit-message-format
+    title: pr-title
+    body: pr-body
+  queue_conditions: &queue-conditions
+    - base=main
+    - or:
+        - check-pending=integration-test-result
+        - check-success=integration-test-result
+        - label=bypass:integration
+  merge_conditions: &merge-conditions
+    - base=main
+    # Rebase PRs with fixup commits are allowed to enter the merge queue but
+    # should not be allowed to merge if there are leftover fixup commits after rebase
+    - or:
+        - label=bypass:linear-history
+        - check-success=no-fixup-commits
+        - check-skipped=no-fixup-commits
+    # Require integration tests before merging only
+    - or:
+        - label=bypass:integration
+        - check-success=integration-test-result
+  pr_queue_merge_conditions: &pr-queue-merge-conditions
+    - base=main
+    - label=automerge:no-update
+    - or:
+        - "#commits-behind=0"
+        - label=bypass:linear-history
+  pr_queue_rebase_conditions: &pr-queue-rebase-conditions
+    - base=main
+    - label=automerge:rebase
+    - or:
+        - "#commits-behind>0"
+        - linear-history
+  pr_queue_squash_conditions: &pr-queue-squash-conditions
+    - base=main
+    - label=automerge:squash
+  linear_history_rebase_conditions: &linear-history-rebase-conditions
+    - base=main
+    - label=automerge:rebase
+    - "#commits-behind=0"
+    - -linear-history
+    - -draft
+  # Copilot's commits are "copilot-swe-agent[bot]" but apparently the GH Author is "Copilot"
+  bot_author_conditions: &bot-author-conditions
+    - author~=\[bot\]$
+    - author=Copilot
+
+merge_queue:
+  max_parallel_checks: 1
+  queued_label: null
+  dequeued_label: null
+  status_comments: none
 
 priority_rules:
   - name: high_priority
     conditions:
       - label=priority:high
     priority: high
+
+# No update_bot_account: Mergify updates queued pull requests as itself, since
+# bot authors can't be impersonated.
+defaults:
+  queue_rule:
+    batch_size: 1
+    merge_bot_account: "mergify[bot]"
+    draft_bot_account: "mergify[bot]"
 
 queue_rules:
   - name: rebase
@@ -79,12 +103,18 @@ pull_request_rules:
     actions:
       queue:
         name: squash
-  - name: rebase to linear history
+  # Bots can't be impersonated, so Mergify rebases their pull requests as itself.
+  - name: rebase to linear history (bot authors)
     conditions:
-      - base=main
-      - label=automerge:rebase
-      - '#commits-behind=0'
-      - -linear-history
-      - -draft
+      - and: *linear-history-rebase-conditions
+      - or: *bot-author-conditions
     actions:
       rebase: {}
+  - name: rebase to linear history
+    conditions:
+      - and: *linear-history-rebase-conditions
+      - not:
+          or: *bot-author-conditions
+    actions:
+      rebase:
+        bot_account: "{{ author }}"
